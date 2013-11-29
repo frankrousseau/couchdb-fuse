@@ -160,7 +160,7 @@ def main():
     try:
         Replication()
     except Exception:
-        print('Something wrong occured while creating replicator')
+        print('Something wrong occured while creating replicator.')
         traceback.print_exc(file=sys.stdout)
 
 

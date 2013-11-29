@@ -125,12 +125,12 @@ class Menu():
             res = db.view("device/all")
             if not res:
                 time.sleep(5)
+                print 'Cannot  get view from db, retry in 5 seconds...'
                 return self._recover_path()
             else:
                 for device in res:
                     if not device.value["folder"]:
-                        time.sleep(5)
-                        return self._recover_path()
+                        return None
                     else:
                         return device.value['folder']
 

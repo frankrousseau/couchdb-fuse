@@ -11,7 +11,6 @@ import time
 import errno
 import fuse
 import stat
-import ntpatH
 
 from couchdb import ResourceNotFound, Server
 
