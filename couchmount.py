@@ -508,7 +508,7 @@ def _create_device_view(db):
                 "all": {
                     "map": "function (doc) {\n" +
                            "    if (doc.docType === \"Device\") {\n" +
-                           "        emit(doc.id, doc) \n    }\n}"
+                           "        emit(doc._id, doc) \n    }\n}"
                 }
             }
         }
