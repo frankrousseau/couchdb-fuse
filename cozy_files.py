@@ -55,7 +55,7 @@ def _replicate_to_local(url, pwd, name, id_device):
     target = LOCAL_DB_URL
     source = _get_remote_url(name, pwd, url)
     server.replicate(source, target, continuous=True,
-                     filter="%s/filtER" % id_device)
+                     filter="%s/filter" % id_device)
 
 
 def _replicate_from_local(url, pwd, name, id_device):
@@ -146,7 +146,6 @@ class Menu():
             subprocess.Popen(["xdg-open", path])
 
         def stopSync(item):
-
             # Stop binary synchronisation
             repli.terminate()
 
@@ -230,6 +229,7 @@ def start_prog():
     #icon.join()
     repli.join()
 
+import traceback
 
 try:
 
@@ -256,6 +256,7 @@ try:
     start_prog()
 
 except Exception, e:
+    traceback.print_exc()
 
     config = subprocess.call([
         'python',

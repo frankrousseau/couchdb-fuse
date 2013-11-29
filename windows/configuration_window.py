@@ -4,10 +4,7 @@ from requests import post
 import requests
 import gobject
 import os
-from couchdb import Database, Document, ResourceNotFound, Server
-from couchdb.client import Row, ViewResults
-import threading
-import subprocess	
+from couchdb import Server
 import time
 import sys
 try:
@@ -55,16 +52,16 @@ def _create_filter(self):
             # Generate filter
             filter = """function(doc, req) {
                     if(doc._deleted) {
-                        return true; 
+                        return true;
                     }
                     if ("""
             for docType in device["configuration"]:
                 filter = filter + "(doc.docType && doc.docType === \"%s\") ||" %docType
             filter = filter[0:-3]
             filter = filter + """){
-                        return true; 
-                    } else { 
-                        return false; 
+                        return true;
+                    } else {
+                        return false;
                     }
                 }"""
             doc = {
@@ -74,12 +71,12 @@ def _create_filter(self):
                     "filter": filter
                     }
                 }
-            self.db.save(doc) 
+            self.db.save(doc)
             return True
 
 
 class Configuration:
-    def __init__(self):  
+    def __init__(self):
         self.builder = Gtk.Builder()
         self.builder.add_from_file('%s/config_ui.glade' % path)
         window = self.builder.get_object("windowConf")
@@ -95,7 +92,9 @@ class Configuration:
         f.close()
         self.username = lines[0].strip()
         self.password = lines[1].strip()
+
         # Create database
+
         self.db = self.server.create(database)
 
         self.db["_design/device"] = {
@@ -103,14 +102,14 @@ class Configuration:
                 "all": {
                     "map": """function (doc) {
                                   if (doc.docType === \"Device\") {
-                                      emit(doc.id, doc) 
+                                      emit(doc.id, doc)
                                   }
                               }"""
                         },
                 "byUrl": {
                     "map": """function (doc) {
                                   if (doc.docType === \"Device\") {
-                                      emit(doc.url, doc) 
+                                      emit(doc.url, doc)
                                   }
                               }"""
                         }
@@ -122,21 +121,21 @@ class Configuration:
                 "all": {
                     "map": """function (doc) {
                                   if (doc.docType === \"Folder\") {
-                                      emit(doc.id, doc) 
+                                      emit(doc.id, doc)
                                   }
                                }"""
                         },
                 "byFolder": {
                     "map": """function (doc) {
                                   if (doc.docType === \"Folder\") {
-                                      emit(doc.path, doc) 
+                                      emit(doc.path, doc)
                                   }
                               }"""
                         },
                 "byFullPath": {
                     "map": """function (doc) {
                                   if (doc.docType === \"Folder\") {
-                                      emit(doc.path + '/' + doc.name, doc) 
+                                      emit(doc.path + '/' + doc.name, doc)
                                   }
                               }"""
                         }
@@ -148,21 +147,21 @@ class Configuration:
                 "all": {
                     "map": """function (doc) {
                                   if (doc.docType === \"File\") {
-                                      emit(doc.id, doc) 
+                                      emit(doc.id, doc)
                                   }
                                }"""
                         },
                 "byFolder": {
                     "map": """function (doc) {
                                   if (doc.docType === \"File\") {
-                                      emit(doc.path, doc) 
+                                      emit(doc.path, doc)
                                   }
                               }"""
                         },
                 "byFullPath": {
                     "map": """function (doc) {
                                   if (doc.docType === \"File\") {
-                                      emit(doc.path + '/' + doc.name, doc) 
+                                      emit(doc.path + '/' + doc.name, doc)
                                   }
                               }"""
                         }
@@ -174,7 +173,7 @@ class Configuration:
                 "all": {
                     "map": """function (doc) {
                                   if (doc.docType === \"Binary\") {
-                                      emit(doc.id, doc) 
+                                      emit(doc.id, doc)
                                   }
                                }"""
                         }
@@ -195,7 +194,7 @@ class Configuration:
             progressbar = self.builder.get_object("progressbar")
             if self.pwdCozy is "" or self.url is "" or self.device is "":
                 self.builder.get_object("alert").set_text('Tous les champs doivent etre rempli')
-                progressbar.set_fraction(0) 
+                progressbar.set_fraction(0)
                 yield False
             else:
                 # Add device in cozy
@@ -203,20 +202,20 @@ class Configuration:
                 yield True
                 data = {'login': self.device}
                 try:
-                    r = post(self.url + '/device/', data=data, auth=('owner', self.pwdCozy))                 
+                    r = post(self.url + '/device/', data=data, auth=('owner', self.pwdCozy))
                     if r.status_code == 401:
-                        self.builder.get_object("alert").set_text('Votre mot de passe est incorrect') 
-                        progressbar.set_fraction(0) 
-                        yield False                 
+                        self.builder.get_object("alert").set_text('Votre mot de passe est incorrect')
+                        progressbar.set_fraction(0)
+                        yield False
                     elif r.status_code == 400:
                         self.builder.get_object("alert").set_text('Ce nom est deja utilise par un autre device')
-                        progressbar.set_fraction(0) 
-                        yield False 
+                        progressbar.set_fraction(0)
+                        yield False
 
-                    else: 
+                    else:
                         progressbar.set_fraction(0.20)
                         yield True
-                        self.builder.get_object("alert").hide()             
+                        self.builder.get_object("alert").hide()
                         # Call replication in one direction
                         data =  json.loads(r.content)
                         self.idDevice = data['id']
@@ -227,18 +226,18 @@ class Configuration:
                         # Update device in local database and create filter
                         _create_filter(self)
                         #Call replication in other direction
-                        _replicate_from_local(self)      
+                        _replicate_from_local(self)
                         yield True
-                        # Quit 
+                        # Quit
                         progress = _recover_progression(self)
                         progress = progress*0.75 + 0.25
                         while progress < 0.99:
-                            progressbar.set_fraction(progress)               
+                            progressbar.set_fraction(progress)
                             yield True
                             progress = _recover_progression(self)
                             progress = progress*0.75 + 0.25
                         Gtk.main_quit()
-                        sys.exit(0)  
+                        sys.exit(0)
                         yield False
 
                 except Exception, e:
@@ -253,4 +252,4 @@ class Configuration:
         sys.exit(0)
 
 if __name__ == "__main__":
-    Configuration()	
+    Configuration()
