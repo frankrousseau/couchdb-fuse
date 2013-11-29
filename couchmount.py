@@ -93,7 +93,7 @@ class CouchFSDocument(fuse.Fuse):
 
         return dirs
 
-    def readdir(self, path):
+    def readdir(self, path, offset):
         """
         Generator: list files for given path and yield each file result when
         it arrives.
@@ -359,10 +359,12 @@ class CouchFSDocument(fuse.Fuse):
 
         for doc in self.db.view("file/byFullPath", key=pathfrom):
             doc = doc.value
+            print doc
             (file_path, name) = _path_split(pathto)
-
+            print file_path
             doc.update({"name": name, "path": file_path})
             self.db.save(doc)
+            return 0
 
         for doc in self.db.view("folder/byFullPath", key=pathfrom):
             doc = doc.value
@@ -437,8 +439,9 @@ class CouchFSDocument(fuse.Fuse):
         '''
         Replicate file modifications to remote Cozy.
         '''
-        source = 'http://%s:%s@localhost:5984/%s' % (self.username,
-                                                     self.password,
+        (username, password) = _get_credentials()
+        source = 'http://%s:%s@localhost:5984/%s' % (username,
+                                                     password,
                                                      DATABASE)
         url = self.urlCozy.split('/')
         target = "https://%s:%s@%s/cozy" % (self.loginCozy,
@@ -459,7 +462,10 @@ def _path_split(path):
     '''
     '''
     _normalize_path(path)
-    return os.path.split(path)
+    (folder_path, name) = os.path.split(path)
+    if folder_path[-1:] == '/':
+        folder_path = folder_path[:-(len(name)+1)]
+    return (folder_path, name)
 
 def _get_folder(db):
     '''

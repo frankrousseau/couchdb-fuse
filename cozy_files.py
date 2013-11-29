@@ -12,9 +12,9 @@ from multiprocessing import Process
 from couchdb import Server
 
 
-
 DATABASE = "cozy-files"
 PATH_COZY = "/usr/local/cozy/cozy-files/couchdb-fuse"
+
 
 def database_connection():
     try:
@@ -39,20 +39,24 @@ server.resource.credentials = (USERNAME, PASSWORD)
 
 ### Replication utils ###
 
-LOCAL_DB_URL = 'http://%s:%s@localhost:5984/%s' % (USERNAME, PASSWORD, DATABASE)
+LOCAL_DB_URL = 'http://%s:%s@localhost:5984/%s' % (USERNAME, PASSWORD,
+                                                   DATABASE)
 
-def _get_remote_url(name, password, url):
+
+def _get_remote_url(name, pwd, url):
     '''
     Return remote url built from username, password and remote url.
     '''
     url = url.split('/')[2]
-    return "https://%s:%s@%s/cozy" % (name, pwd, url[2])
+    return "https://%s:%s@%s/cozy" % (name, pwd, url)
+
 
 def _replicate_to_local(url, pwd, name, id_device):
-    target =  LOCAL_DB_URL
-    source = _get_remote_url(name, pwd, url[2])
-    server.replicate(source, target,continuous=True,
-                     filter="%s/filter" % id_device)
+    target = LOCAL_DB_URL
+    source = _get_remote_url(name, pwd, url)
+    server.replicate(source, target, continuous=True,
+                     filter="%s/filtER" % id_device)
+
 
 def _replicate_from_local(url, pwd, name, id_device):
     target = _get_remote_url(name, pwd, url)
@@ -60,14 +64,16 @@ def _replicate_from_local(url, pwd, name, id_device):
     server.replicate(source, target, continuous=True,
                      filter="%s/filter" % id_device)
 
+
 def _one_shot_replicate_to_local(url, pwd, name, id_device):
-    target =  LOCAL_DB_URL
+    target = LOCAL_DB_URL
     source = _get_remote_url(name, pwd, url)
     server.replicate(source, target, filter="%s/filter" % id_device)
 
+
 def _one_shot_replicate_from_local(url, pwd, name, id_device):
     target = _get_remote_url(name, pwd, url)
-    source =  LOCAL_DB_URL()
+    source = LOCAL_DB_URL
     server.replicate(source, target, filter="%s/filter" % id_device)
 
 
@@ -125,19 +131,19 @@ class Menu():
             res = db.view("device/all")
             if not res:
                 time.sleep(5)
-                print 'Cannot  get view from db, retry in 5 seconds...'
                 return self._recover_path()
             else:
                 for device in res:
+                    print 'Cannot  get view from db, retry in 5 seconds...'
                     if not device.value["folder"]:
-                        return None
+                        time.sleep(5)
+                        return self._recover_path()
                     else:
                         return device.value['folder']
 
-
         def openFolder(item):
-           path = _recover_path()
-           subprocess.Popen(["xdg-open", path])
+            path = _recover_path()
+            subprocess.Popen(["xdg-open", path])
 
         def stopSync(item):
 
@@ -148,10 +154,10 @@ class Menu():
             r = requests.get('http://localhost:5984/_active_tasks')
             replications = json.loads(r.content)
             for rep in replications:
-                idRep =  str(rep["replication_id"])
-                data = {"replication_id":"%s" % idRep, "cancel": True}
+                idRep = str(rep["replication_id"])
+                data = {"replication_id": "%s" % idRep, "cancel": True}
                 r = requests.post("http://localhost:5984/_replicate",
-                                  data=json.dumps(data) ,
+                                  data=json.dumps(data),
                                   headers={'Content-Type': 'application/json'})
             stop.hide()
             autoSync.show()
@@ -168,9 +174,7 @@ class Menu():
                 _one_shot_replicate_to_local(url, pwd, name, idDevice)
                 _one_shot_replicate_from_local(url, pwd, name, idDevice)
 
-
         def startAutoSync(item):
-
             # Start metadata replication
             res = db.view("device/all")
             for device in res:
@@ -183,7 +187,7 @@ class Menu():
                 _replicate_from_local(url, pwd, name, idDevice)
 
             # Start binaries synchronisation
-            repli = Process(target = replication.main)
+            repli = Process(target=replication.main)
             repli.start()
             stop.show()
             autoSync.hide()
@@ -215,7 +219,7 @@ class Menu():
 
 def start_prog():
     # Start fuse
-    fuse = Process(target = couchmount.main)
+    fuse = Process(target=couchmount.main)
     fuse.start()
 
     # Start menu
@@ -251,8 +255,6 @@ try:
     repli.start()
     start_prog()
 
-
-
 except Exception, e:
 
     config = subprocess.call([
@@ -261,7 +263,7 @@ except Exception, e:
     ])
 
     if config is 0:
-        repli = Process(target = replication.main)
+        repli = Process(target=replication.main)
         repli.start()
         binaries_download = subprocess.call([
             'python',
@@ -275,4 +277,3 @@ except Exception, e:
             start_prog()
     else:
         sys.exit(1)
-
