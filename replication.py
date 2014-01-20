@@ -47,13 +47,14 @@ class Replication():
             self.passwordCozy = device['password']
 
             self.ids = {}
-            for res in self.db.view("file/all"):
-                id_binary = res.value['binary']['file']['id']
-                if id_binary in self.db:
-                    binary = self.db[id_binary]
-                    self.ids[res.id] = [id_binary, binary.rev]
-                else:
-                    self.ids[res.id] = [id_binary, ""]
+            for res in self.db.view("file/all"):                
+                if 'binary' in res.value and 'file' in res.value['binary']:
+                    id_binary = res.value['binary']['file']['id']
+                    if id_binary in self.db:
+                        binary = self.db[id_binary]
+                        self.ids[res.id] = [id_binary, binary.rev]
+                    else:
+                        self.ids[res.id] = [id_binary, ""]
 
             changes = self.db.changes(feed='continuous',
                                       heartbeat='1000',
@@ -104,17 +105,17 @@ class Replication():
             doc = self.db[id_doc]
             if 'docType' in doc:
                 if doc['docType'] == 'File':
-                    if doc['binary']:
+                    if 'binary' in doc:
                         binary = doc['binary']['file']
                         self.ids[id_doc] = [binary['id'], binary['rev']]
                         self._replicate_to_local([binary['id']])
-                    elif not self.ids[id_doc]:
+                    elif not id_doc in self.ids:
                         self.ids[id_doc] = ["", ""]
 
         except Exception, e:
             print 'An error occured while replicating creation for:'
             print 'doc %s' %line['doc']['_id']
-            print e
+            traceback.print_stack()
 
     def _delete_file(self, line):
         '''
@@ -130,7 +131,7 @@ class Replication():
         except Exception, e:
             print 'An error occured while replicating deletion for:'
             print 'doc %s' %line['doc']['_id']
-            print e
+            traceback.print_stack()
 
     def _update_file(self, line):
         '''
@@ -147,7 +148,7 @@ class Replication():
         except Exception, e:
             print 'An error occured while replicating update for:'
             print 'doc %s' %line['doc']['_id']
-            print e
+            traceback.print_stack()
 
     def _replicate_to_local(self, ids):
         '''
